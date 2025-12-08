@@ -62,6 +62,19 @@ export const generateDietPlan = async (profile: UserProfile): Promise<DietPlan> 
       budgetInstruction = "Flexible Budget. Can include premium ingredients (Greek yogurt, walnuts, berries, multigrain bread, avocado) if beneficial.";
   }
 
+  // Construct Allergy String
+  const allergyList = profile.allergies && profile.allergies.length > 0 ? profile.allergies.join(", ") : "None";
+  const allergyContext = `
+    CRITICAL ALLERGY WARNING:
+    The user is allergic to: ${allergyList}.
+    Additional allergy notes: ${profile.allergyNotes || "None"}.
+    
+    SAFETY INSTRUCTIONS:
+    - You MUST NOT include any ingredients from the allergy list or their derivatives.
+    - Double-check every recipe. If a typical Indian dish usually contains these allergens, use a safe alternative or pick a different dish entirely.
+    - Example: If allergic to nuts, do not use cashews in gravy.
+  `;
+
   const prompt = `
     Create a detailed daily diet plan for an Indian user.
     Context:
@@ -70,6 +83,7 @@ export const generateDietPlan = async (profile: UserProfile): Promise<DietPlan> 
     - Goal: ${profile.goal}
     - Calories: Target specific calories based on ${profile.weight}kg and ${profile.goal}.
     - Budget Level: ${budgetInstruction}
+    ${allergyContext}
 
     Output Requirements:
     - 5 meals: Breakfast, Lunch, Dinner, Snack 1, Snack 2.
@@ -152,6 +166,8 @@ export const generateDietPlan = async (profile: UserProfile): Promise<DietPlan> 
 };
 
 export const swapMeal = async (profile: UserProfile, currentMeal: MealItem): Promise<MealItem> => {
+  const allergyList = profile.allergies && profile.allergies.length > 0 ? profile.allergies.join(", ") : "None";
+  
   const prompt = `
     Suggest ONE alternative meal option to swap with the following meal:
     Current Meal: ${currentMeal.name} (${currentMeal.type}, approx ${currentMeal.calories} kcal).
@@ -160,12 +176,15 @@ export const swapMeal = async (profile: UserProfile, currentMeal: MealItem): Pro
     - Preference: ${profile.dietaryPreference}
     - Region: ${profile.region}
     - Budget: ${profile.budgetLevel}
+    - ALLERGIES TO AVOID: ${allergyList}
+    - Allergy Notes: ${profile.allergyNotes || "None"}
 
     Requirements:
     - Same meal type (${currentMeal.type}).
     - Similar calorie count (+/- 100 kcal).
     - Different main ingredients.
     - JSON Output matches the standard meal item schema.
+    - SAFETY: Do not include allergic ingredients.
   `;
 
   // Reuse schemas from generateDietPlan
@@ -291,6 +310,8 @@ export const chatWithCoach = async (
   history: {role: string, parts: {text: string}[]}[], 
   message: string
 ) => {
+  const allergyList = profile.allergies && profile.allergies.length > 0 ? profile.allergies.join(", ") : "None";
+  
   const systemInstruction = `
     You are an expert Indian Fitness & Nutrition Coach.
     User Context:
@@ -298,10 +319,13 @@ export const chatWithCoach = async (
     - Goal: ${profile.goal}
     - Diet: ${profile.dietaryPreference}
     - Region: ${profile.region}
+    - Allergies: ${allergyList}
+    - Allergy Notes: ${profile.allergyNotes || "None"}
 
     Guidelines:
     - Be encouraging, strict but friendly (like a good Indian coach "Guru-ji" style).
     - Provide specific advice on Indian food alternatives.
+    - NEVER suggest foods the user is allergic to.
     - Keep responses concise.
   `;
 

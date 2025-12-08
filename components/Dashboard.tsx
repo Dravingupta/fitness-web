@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, DietPlan, WorkoutPlan, DailyTracking, ManualMeal, ManualWorkout, MealItem, WorkoutExercise } from '../types';
 import { generateDietPlan, generateWorkoutPlan, swapMeal } from '../services/geminiService';
-import { RefreshCw, Calendar, ChevronLeft, ChevronRight, Activity, TrendingDown, TrendingUp, LogOut, Settings, Plus, Dumbbell, Utensils, Award, Flame, Zap, User as UserIcon } from 'lucide-react';
+import { RefreshCw, Calendar, ChevronLeft, ChevronRight, Activity, TrendingDown, TrendingUp, LogOut, Settings, Plus, Dumbbell, Utensils, Award, Flame, Zap, User as UserIcon, Moon, Sun } from 'lucide-react';
 import ChatCoach from './ChatCoach';
 import DietCard, { AddMealModal } from './DietCard';
 import WorkoutCard, { AddWorkoutModal } from './WorkoutCard';
@@ -11,6 +11,8 @@ interface DashboardProps {
   user: UserProfile;
   onLogout: () => void;
   onEditProfile: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 // Simple Ring Progress Component
@@ -23,7 +25,7 @@ const ProgressRing: React.FC<{ radius: number; stroke: number; progress: number;
     <div className="relative flex items-center justify-center">
       <svg height={radius * 2} width={radius * 2} className="rotate-[-90deg]">
         <circle
-          stroke="rgb(243 244 246)"
+          className="stroke-gray-200 dark:stroke-slate-700"
           strokeWidth={stroke}
           fill="transparent"
           r={normalizedRadius}
@@ -90,7 +92,7 @@ const computeBurnedToday = (
   return total;
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, theme, onToggleTheme }) => {
   // Date State
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
 
@@ -99,7 +101,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<'meal' | 'workout' | null>(null);
   const [swappingMealId, setSwappingMealId] = useState<string | null>(null);
-  const [activeMobileSection, setActiveMobileSection] = useState<'meals' | 'workout' | 'coach'>('meals');
+  
+  // Unified Tab State
+  const [activeSection, setActiveSection] = useState<'meals' | 'workout' | 'coach'>('meals');
 
   // Data persistence by Date
   const [dietHistory, setDietHistory] = useState<Record<string, DietPlan>>({});
@@ -358,10 +362,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
   
   const getGoalColor = (goal: string) => {
     switch(goal) {
-      case 'Fat Loss': return 'bg-emerald-100 text-emerald-800';
-      case 'Muscle Gain': return 'bg-blue-100 text-blue-800';
-      case 'General Fitness': return 'bg-violet-100 text-violet-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Fat Loss': return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300';
+      case 'Muscle Gain': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
+      case 'General Fitness': return 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
     }
   };
 
@@ -491,40 +495,48 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-inter text-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col font-inter text-gray-900 dark:text-gray-100 transition-colors duration-300">
       {/* Header - White, Clean, Minimal */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
+      <header className="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 shadow-sm sticky top-0 z-30 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             
             {/* Row 1: Brand & Profile (Mobile optimized layout) */}
             <div className="flex items-center justify-between w-full sm:w-auto">
                <div>
-                  <h1 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight flex items-center gap-2">
                     <span className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">I</span>
                     Indian AI Coach
                   </h1>
-                  <p className="text-xs text-gray-500 font-medium pl-10 -mt-1">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium pl-10 -mt-1">
                     Namaste, {user.name ? user.name.split(' ')[0] : 'Friend'}
                   </p>
                </div>
                
                {/* Mobile Profile Toggle */}
-               <div className="sm:hidden relative">
+               <div className="sm:hidden relative flex items-center gap-3">
+                   {/* Mobile Theme Toggle */}
+                   <button
+                    onClick={onToggleTheme}
+                    className="w-9 h-9 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-center text-gray-600 dark:text-gray-300 transition-colors"
+                   >
+                     {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                   </button>
+                   
                    <button
                     onClick={() => setIsMenuOpen((prev) => !prev)}
-                    className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-bold text-sm border border-gray-200"
+                    className="w-9 h-9 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-700 dark:text-gray-300 font-bold text-sm border border-gray-200 dark:border-slate-700"
                   >
                     {user.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
                   </button>
                   {isMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)}></div>
-                      <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 border border-gray-200 rounded-xl shadow-xl text-sm z-20">
-                        <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2">
+                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl text-sm z-20">
+                        <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2">
                           <Settings className="w-4 h-4 text-gray-400" /> Edit Profile
                         </button>
-                        <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-gray-100">
+                        <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700">
                           <LogOut className="w-4 h-4" /> Logout
                         </button>
                       </div>
@@ -537,30 +549,39 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
             <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
                 
                 {/* Date Navigator */}
-                <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200 shadow-inner">
-                  <button onClick={() => handleDateChange(-1)} className="p-1.5 hover:bg-white rounded-md text-gray-500 hover:text-gray-900 transition shadow-sm hover:shadow">
+                <div className="flex items-center bg-gray-100 dark:bg-slate-800 rounded-lg p-1 border border-gray-200 dark:border-slate-700 shadow-inner">
+                  <button onClick={() => handleDateChange(-1)} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition shadow-sm hover:shadow">
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <div className="flex items-center px-3 text-xs font-bold text-gray-700 min-w-[100px] justify-center">
+                  <div className="flex items-center px-3 text-xs font-bold text-gray-700 dark:text-gray-300 min-w-[100px] justify-center">
                     <Calendar className="w-3 h-3 mr-1.5 opacity-60" />
                     {new Date(selectedDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </div>
-                  <button onClick={() => handleDateChange(1)} className="p-1.5 hover:bg-white rounded-md text-gray-500 hover:text-gray-900 transition shadow-sm hover:shadow">
+                  <button onClick={() => handleDateChange(1)} className="p-1.5 hover:bg-white dark:hover:bg-slate-700 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition shadow-sm hover:shadow">
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Streak Badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full border border-orange-100 shadow-sm whitespace-nowrap">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full border border-orange-100 dark:border-orange-900/50 shadow-sm whitespace-nowrap">
                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                    <span className="text-xs font-bold">{badgeStats.streak}-day streak</span>
                 </div>
+
+                {/* Desktop Theme Toggle */}
+                <button
+                  onClick={onToggleTheme}
+                  className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm text-gray-600 dark:text-gray-200 transition-colors duration-200 hover:bg-gray-50 dark:hover:bg-slate-700"
+                  aria-label="Toggle theme"
+                >
+                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                </button>
 
                 {/* Desktop Profile */}
                 <div className="hidden sm:block relative">
                    <button
                       onClick={() => setIsMenuOpen((prev) => !prev)}
-                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition"
+                      className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition"
                     >
                       <span className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md">
                         {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -570,15 +591,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
                     {isMenuOpen && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)}></div>
-                        <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 border border-gray-200 rounded-xl shadow-xl text-sm z-20 animate-in fade-in slide-in-from-top-2 duration-200">
-                          <div className="px-4 py-3 border-b border-gray-100">
-                            <p className="font-bold text-gray-900">{user.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{user.email || 'User'}</p>
+                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl text-sm z-20 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                            <p className="font-bold text-gray-900 dark:text-white">{user.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email || 'User'}</p>
                           </div>
-                          <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 flex items-center gap-2">
+                          <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2">
                             <Settings className="w-4 h-4 text-gray-400" /> Edit Profile
                           </button>
-                          <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 text-red-600 flex items-center gap-2 border-t border-gray-100">
+                          <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700">
                             <LogOut className="w-4 h-4" /> Logout
                           </button>
                         </div>
@@ -598,12 +619,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           
           {/* Card 1: Today */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 flex flex-col justify-between transition-colors duration-300">
             <div>
-              <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-1">
                  {isToday ? "Today" : "Selected Date"}
               </p>
-              <h3 className="text-xl font-bold text-gray-900">{formattedDate}</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">{formattedDate}</h3>
             </div>
             <div className="mt-4">
                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${getGoalColor(user.goal)}`}>
@@ -614,13 +635,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
           </div>
 
           {/* Card 2: Calories In (Ring) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 flex items-center gap-4 transition-colors duration-300">
             <div className="shrink-0">
                <ProgressRing radius={36} stroke={6} progress={eatenPercent} color="#f97316" />
             </div>
             <div>
-               <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-0.5">Calories In</p>
-               <div className="text-2xl font-bold text-gray-900 leading-none">
+               <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-0.5">Calories In</p>
+               <div className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
                  {currentTracking.totalEstimatedCaloriesConsumed.toLocaleString()}
                </div>
                <p className="text-xs text-gray-400 mt-1 font-medium">
@@ -630,13 +651,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
           </div>
 
           {/* Card 3: Calories Out (Ring) */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 flex items-center gap-4 transition-colors duration-300">
             <div className="shrink-0">
                <ProgressRing radius={36} stroke={6} progress={burnPercent} color="#10b981" />
             </div>
             <div>
-               <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mb-0.5">Calories Out</p>
-               <div className="text-2xl font-bold text-gray-900 leading-none">
+               <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide mb-0.5">Calories Out</p>
+               <div className="text-2xl font-bold text-gray-900 dark:text-white leading-none">
                  {burnedToday.toLocaleString()}
                </div>
                <p className="text-xs text-gray-400 mt-1 font-medium">
@@ -646,41 +667,41 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
           </div>
 
           {/* Card 4: Net */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col justify-between">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 flex flex-col justify-between transition-colors duration-300">
             <div>
                <div className="flex items-center gap-2 mb-1">
-                  <Activity className="w-4 h-4 text-indigo-500" />
-                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wide">Net Calories</p>
+                  <Activity className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wide">Net Calories</p>
                </div>
-               <div className={`text-3xl font-bold ${currentNet > currentTarget ? 'text-red-600' : 'text-gray-900'}`}>
+               <div className={`text-3xl font-bold ${currentNet > currentTarget ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                  {currentNet > 0 ? '+' : ''}{currentNet.toLocaleString()} 
                </div>
             </div>
-            <p className={`text-xs font-medium ${currentNet <= currentTarget ? 'text-emerald-600' : 'text-red-500'}`}>
+            <p className={`text-xs font-medium ${currentNet <= currentTarget ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
                {netVerdict}
             </p>
           </div>
         </div>
 
-        {/* Weekly Summary (Stacked for readability on all screens) */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+        {/* Weekly Summary */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 mb-6 transition-colors duration-300">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h3 className="text-sm font-bold text-gray-900">This week so far</h3>
-              <p className="text-xs text-gray-500">{weeklyVerdict}</p>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">This week so far</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{weeklyVerdict}</p>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
                <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 font-medium">In</span>
-                  <span className="font-bold text-gray-900">{weeklyStats.totalConsumed.toLocaleString()}</span>
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">In</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalConsumed.toLocaleString()}</span>
                </div>
                <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 font-medium">Out</span>
-                  <span className="font-bold text-gray-900">{weeklyStats.totalBurned.toLocaleString()}</span>
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Out</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalBurned.toLocaleString()}</span>
                </div>
                <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 font-medium">Net</span>
-                  <span className={`font-bold ${weeklyStats.net > weeklyStats.totalTarget ? 'text-red-600' : 'text-emerald-600'}`}>
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Net</span>
+                  <span className={`font-bold ${weeklyStats.net > weeklyStats.totalTarget ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                     {weeklyStats.net > 0 ? '+' : ''}{weeklyStats.net.toLocaleString()}
                   </span>
                </div>
@@ -688,169 +709,133 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile }) 
           </div>
         </div>
 
-        {/* Badges & Stats Section (Always Visible) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-               <Flame className="w-5 h-5 text-orange-600" />
-             </div>
-             <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Streak</p>
-               <p className="text-sm font-bold text-gray-900">{badgeStats.streak} day{badgeStats.streak !== 1 ? 's' : ''}</p>
-             </div>
-           </div>
-           
-           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-               <Utensils className="w-5 h-5 text-emerald-600" />
-             </div>
-             <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Meals Tracked</p>
-               <p className="text-sm font-bold text-gray-900">{badgeStats.mealsCount} this week</p>
-             </div>
-           </div>
-
-           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-               <Zap className="w-5 h-5 text-blue-600" />
-             </div>
-             <div>
-               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Active Time</p>
-               <p className="text-sm font-bold text-gray-900">{badgeStats.activeMinutes} mins</p>
-             </div>
-           </div>
+        {/* Unified Tabs */}
+        <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-xl mb-6 transition-colors duration-300 overflow-x-auto">
+           {(['meals', 'workout', 'coach'] as const).map(section => (
+             <button 
+               key={section}
+               onClick={() => setActiveSection(section)}
+               className={`flex-1 min-w-[100px] py-2.5 text-sm font-medium rounded-lg transition-all duration-200 capitalize ${
+                 activeSection === section 
+                   ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+               }`}
+             >
+               {section}
+             </button>
+           ))}
         </div>
 
-        {/* Mobile Tabs */}
-        <div className="lg:hidden flex gap-2 p-1 bg-gray-200/50 rounded-xl mb-6">
-           <button 
-             onClick={() => setActiveMobileSection('meals')}
-             className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${activeMobileSection === 'meals' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-           >
-             Meals
-           </button>
-           <button 
-             onClick={() => setActiveMobileSection('workout')}
-             className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${activeMobileSection === 'workout' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-           >
-             Workout
-           </button>
-           <button 
-             onClick={() => setActiveMobileSection('coach')}
-             className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${activeMobileSection === 'coach' ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-           >
-             Coach
-           </button>
-        </div>
-
-        {/* 3-Column Layout (Desktop Side-by-Side) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Diet Section */}
-          <div className={`${activeMobileSection === 'meals' ? 'block' : 'hidden'} lg:block flex flex-col h-full`}>
-             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px] flex flex-col h-full">
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                   <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                     <Utensils className="w-4 h-4 text-orange-500" />
-                     Your Meals
-                   </h2>
-                   <button onClick={() => window.confirm('Regenerate Diet Plan?') && handleGenerateDiet()} disabled={loadingDiet} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition">
-                     <RefreshCw className={`w-4 h-4 ${loadingDiet ? 'animate-spin' : ''}`} />
-                   </button>
-                </div>
-                
-                <div className="flex-1 p-4 overflow-y-auto">
-                  {loadingDiet ? (
-                     <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
-                        <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-50" />
-                        <p>Chef AI is cooking...</p>
-                     </div>
-                  ) : currentDietPlan ? (
-                    <DietCard 
-                      plan={currentDietPlan} 
-                      manualMeals={currentManualMeals}
-                      completedMealIds={currentTracking.completedMealIds}
-                      onToggleMeal={toggleMeal}
-                      onAddManualMeal={addManualMeal}
-                      onSwapMeal={handleSwapMeal}
-                      swappingMealId={swappingMealId}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                      <p className="mb-4">No diet plan generated.</p>
-                      <button onClick={handleGenerateDiet} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Plan</button>
-                    </div>
-                  )}
-                </div>
-             </section>
-          </div>
-
-          {/* Workout Section */}
-          <div className={`${activeMobileSection === 'workout' ? 'block' : 'hidden'} lg:block flex flex-col h-full`}>
-             <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden min-h-[500px] flex flex-col h-full">
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                   <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                     <Dumbbell className="w-4 h-4 text-blue-500" />
-                     Your Workout
-                   </h2>
-                   <button onClick={handleGenerateWorkout} disabled={loadingWorkout} className="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition">
-                     <RefreshCw className={`w-4 h-4 ${loadingWorkout ? 'animate-spin' : ''}`} />
-                   </button>
-                </div>
-                
-                <div className="flex-1 p-4 overflow-y-auto">
-                   {loadingWorkout ? (
-                     <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
-                        <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-50" />
-                        <p>Training AI is preparing...</p>
-                     </div>
-                  ) : currentWorkoutPlan ? (
-                    <WorkoutCard 
-                      plan={currentWorkoutPlan} 
-                      manualWorkouts={currentManualWorkouts}
-                      completedExerciseIds={currentTracking.completedExerciseIds}
-                      onToggleExercise={toggleExercise}
-                      onAddManualWorkout={addManualWorkout}
-                      userWeight={user.weight}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                      <p className="mb-4">No workout plan generated.</p>
-                      <button onClick={handleGenerateWorkout} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Workout</button>
-                    </div>
-                  )}
-                </div>
-             </section>
-          </div>
-
-          {/* Coach Section */}
-          <div className={`${activeMobileSection === 'coach' ? 'block' : 'hidden'} lg:block flex flex-col h-full`}>
-             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[500px] lg:h-full">
-                <div className="p-3 border-b border-gray-100 bg-gray-50/50 font-bold text-gray-700 text-sm flex items-center gap-2">
-                   <Award className="w-4 h-4 text-yellow-500" /> Ask Guru-ji
-                </div>
-                <div className="flex-1 overflow-hidden">
-                   <ChatCoach user={user} />
+        {/* Content Area - Full Width */}
+        <div className="min-h-[500px]">
+           {activeSection === 'meals' && (
+             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden min-h-[500px] flex flex-col">
+                  <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+                     <h2 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                       <Utensils className="w-4 h-4 text-orange-500" />
+                       Your Meals
+                     </h2>
+                     <button onClick={() => window.confirm('Regenerate Diet Plan?') && handleGenerateDiet()} disabled={loadingDiet} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 p-1.5 rounded-lg transition">
+                       <RefreshCw className={`w-4 h-4 ${loadingDiet ? 'animate-spin' : ''}`} />
+                     </button>
+                  </div>
+                  
+                  <div className="flex-1 p-4">
+                    {loadingDiet ? (
+                       <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+                          <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-50" />
+                          <p>Chef AI is cooking...</p>
+                       </div>
+                    ) : currentDietPlan ? (
+                      <DietCard 
+                        plan={currentDietPlan} 
+                        manualMeals={currentManualMeals}
+                        completedMealIds={currentTracking.completedMealIds}
+                        onToggleMeal={toggleMeal}
+                        onAddManualMeal={addManualMeal}
+                        onSwapMeal={handleSwapMeal}
+                        swappingMealId={swappingMealId}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <p className="mb-4">No diet plan generated.</p>
+                        <button onClick={handleGenerateDiet} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Plan</button>
+                      </div>
+                    )}
+                  </div>
                 </div>
              </div>
-          </div>
+           )}
+
+           {activeSection === 'workout' && (
+             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden min-h-[500px] flex flex-col">
+                  <div className="p-4 border-b border-gray-100 dark:border-slate-800 flex justify-between items-center bg-gray-50/50 dark:bg-slate-800/50">
+                     <h2 className="font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                       <Dumbbell className="w-4 h-4 text-blue-500" />
+                       Your Workout
+                     </h2>
+                     <button onClick={handleGenerateWorkout} disabled={loadingWorkout} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 p-1.5 rounded-lg transition">
+                       <RefreshCw className={`w-4 h-4 ${loadingWorkout ? 'animate-spin' : ''}`} />
+                     </button>
+                  </div>
+                  
+                  <div className="flex-1 p-4">
+                     {loadingWorkout ? (
+                       <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+                          <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-50" />
+                          <p>Training AI is preparing...</p>
+                       </div>
+                    ) : currentWorkoutPlan ? (
+                      <WorkoutCard 
+                        plan={currentWorkoutPlan} 
+                        manualWorkouts={currentManualWorkouts}
+                        completedExerciseIds={currentTracking.completedExerciseIds}
+                        onToggleExercise={toggleExercise}
+                        onAddManualWorkout={addManualWorkout}
+                        userWeight={user.weight}
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <p className="mb-4">No workout plan generated.</p>
+                        <button onClick={handleGenerateWorkout} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Workout</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+             </div>
+           )}
+
+           {activeSection === 'coach' && (
+             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 h-[600px]">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col h-full">
+                  <div className="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 font-bold text-gray-700 dark:text-gray-200 text-sm flex items-center gap-2">
+                     <Award className="w-4 h-4 text-yellow-500" /> Ask Guru-ji
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                     <ChatCoach user={user} />
+                  </div>
+                </div>
+             </div>
+           )}
         </div>
 
         {/* FAB (Floating Action Button) */}
         <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
            {isFabOpen && (
               <div className="flex flex-col items-end gap-2 animate-in slide-in-from-bottom-5 fade-in duration-200">
-                 <button onClick={() => { setActiveModal('meal'); setIsFabOpen(false); }} className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-full shadow-lg border border-gray-100 font-medium hover:bg-gray-50 transition">
+                 <button onClick={() => { setActiveModal('meal'); setIsFabOpen(false); }} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-full shadow-lg border border-gray-100 dark:border-slate-700 font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition">
                     <Utensils className="w-4 h-4 text-orange-500" /> Log Food
                  </button>
-                 <button onClick={() => { setActiveModal('workout'); setIsFabOpen(false); }} className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-full shadow-lg border border-gray-100 font-medium hover:bg-gray-50 transition">
+                 <button onClick={() => { setActiveModal('workout'); setIsFabOpen(false); }} className="flex items-center gap-2 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-full shadow-lg border border-gray-100 dark:border-slate-700 font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition">
                     <Dumbbell className="w-4 h-4 text-blue-500" /> Log Workout
                  </button>
               </div>
            )}
            <button 
              onClick={() => setIsFabOpen(!isFabOpen)}
-             className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl text-white transition-all transform hover:scale-105 ${isFabOpen ? 'bg-gray-800 rotate-45' : 'bg-indigo-600'}`}
+             className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl text-white transition-all transform hover:scale-105 ${isFabOpen ? 'bg-gray-800 dark:bg-slate-700 rotate-45' : 'bg-indigo-600 dark:bg-indigo-500'}`}
            >
               <Plus className="w-7 h-7" />
            </button>

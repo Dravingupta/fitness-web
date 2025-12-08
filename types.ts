@@ -41,7 +41,9 @@ export interface UserProfile {
   bodyType: BodyType;
   bodyAnalysis?: string;
   budgetLevel: 'low' | 'medium' | 'flexible';
-  notes?: string; // New field for extra preferences
+  notes?: string;
+  allergies?: string[];   // list of allergens
+  allergyNotes?: string;  // free-text notes
 }
 
 // --- Detailed Diet Types ---

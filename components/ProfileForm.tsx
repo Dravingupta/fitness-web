@@ -30,6 +30,10 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
     ...initialData,
   });
 
+  // Allergy State
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>(initialData?.allergies || []);
+  const [allergyNotes, setAllergyNotes] = useState<string>(initialData?.allergyNotes || '');
+
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string>(initialData?.bodyAnalysis || '');
 
@@ -37,6 +41,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
     if (initialData) {
       setFormData(prev => ({ ...prev, ...initialData }));
       if (initialData.bodyAnalysis) setAnalysisResult(initialData.bodyAnalysis);
+      if (initialData.allergies) setSelectedAllergies(initialData.allergies);
+      if (initialData.allergyNotes) setAllergyNotes(initialData.allergyNotes);
     }
   }, [initialData]);
 
@@ -56,6 +62,26 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
   const handleSelect = (name: string, value: any) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const toggleAllergy = (label: string) => {
+    if (label === 'None') {
+      // Clear others if None is selected, or toggle None off
+      if (selectedAllergies.includes('None')) {
+         setSelectedAllergies([]);
+      } else {
+         setSelectedAllergies(['None']);
+      }
+    } else {
+      // Remove 'None' if any specific allergy is selected
+      let current = selectedAllergies.filter(a => a !== 'None');
+      if (current.includes(label)) {
+        current = current.filter(a => a !== label);
+      } else {
+        current.push(label);
+      }
+      setSelectedAllergies(current);
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,23 +149,31 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
   const handleSubmit = (e?: React.MouseEvent) => {
     e?.preventDefault();
-    onSave(formData as UserProfile);
+    const finalProfile: UserProfile = {
+       ...(formData as UserProfile),
+       allergies: selectedAllergies.filter(a => a !== 'None'),
+       allergyNotes: allergyNotes
+    };
+    onSave(finalProfile);
   };
 
   const isEdit = mode === 'edit';
 
+  const inputClass = "w-full rounded-xl px-3 py-3 text-sm outline-none border transition-colors duration-200 bg-white text-gray-900 border-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 dark:bg-slate-900 dark:text-gray-100 dark:border-slate-700 dark:focus:border-indigo-400 dark:focus:ring-indigo-400";
+  const labelClass = "block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2";
+
   const StepIndicator = ({ num, label, active }: { num: number; label: string; active: boolean }) => (
-    <div className={`flex items-center gap-2 ${active ? 'text-indigo-600' : 'text-gray-400'}`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-colors ${active ? 'border-indigo-600 bg-indigo-50' : 'border-gray-200 bg-white'}`}>
+    <div className={`flex items-center gap-2 ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-slate-600'}`}>
+      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm border-2 transition-colors ${active ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:border-indigo-500' : 'border-gray-200 bg-white dark:border-slate-700 dark:bg-slate-800'}`}>
         {num}
       </div>
-      <span className={`text-sm font-medium hidden sm:block transition-colors ${active ? 'text-gray-900' : 'text-gray-400'}`}>{label}</span>
+      <span className={`text-sm font-medium hidden sm:block transition-colors ${active ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-slate-600'}`}>{label}</span>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center">
-      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden flex flex-col">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-10 px-4 flex items-center justify-center transition-colors">
+      <div className="max-w-3xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
         
         {/* Header Section */}
         <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shrink-0">
@@ -157,11 +191,11 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
+        <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
           <StepIndicator num={1} label="Basic Info" active={step >= 1} />
-          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>
+          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 2 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
           <StepIndicator num={2} label="Goals" active={step >= 2} />
-          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 3 ? 'bg-indigo-600' : 'bg-gray-200'}`}></div>
+          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 3 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
           <StepIndicator num={3} label="Preferences" active={step >= 3} />
         </div>
 
@@ -170,7 +204,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
           
           {/* Error Banner */}
           {error && (
-            <div className="mb-6 bg-red-50 text-red-600 px-4 py-3 rounded-xl flex items-center animate-in fade-in slide-in-from-top-2">
+            <div className="mb-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl flex items-center animate-in fade-in slide-in-from-top-2">
               <AlertCircle className="w-5 h-5 mr-2" />
               <span className="text-sm font-medium">{error}</span>
             </div>
@@ -180,18 +214,18 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                <input name="name" type="text" value={formData.name} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition" placeholder="e.g. Rahul Kumar" />
+                <label className={labelClass}>Full Name</label>
+                <input name="name" type="text" value={formData.name} onChange={handleChange} className={inputClass} placeholder="e.g. Rahul Kumar" />
               </div>
               
               <div className="grid grid-cols-2 gap-6">
                  <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Age</label>
-                  <input name="age" type="number" value={formData.age === undefined ? '' : formData.age} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="25" />
+                  <label className={labelClass}>Age</label>
+                  <input name="age" type="number" value={formData.age === undefined ? '' : formData.age} onChange={handleChange} className={inputClass} placeholder="25" />
                 </div>
                 <div>
-                   <label className="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
-                   <select name="gender" value={formData.gender} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                   <label className={labelClass}>Gender</label>
+                   <select name="gender" value={formData.gender} onChange={handleChange} className={inputClass}>
                      <option value="Male">Male</option>
                      <option value="Female">Female</option>
                      <option value="Other">Other</option>
@@ -201,12 +235,12 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
               <div className="grid grid-cols-2 gap-6">
                  <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Height (cm)</label>
-                  <input name="height" type="number" value={formData.height === undefined ? '' : formData.height} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="175" />
+                  <label className={labelClass}>Height (cm)</label>
+                  <input name="height" type="number" value={formData.height === undefined ? '' : formData.height} onChange={handleChange} className={inputClass} placeholder="175" />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Weight (kg)</label>
-                  <input name="weight" type="number" value={formData.weight === undefined ? '' : formData.weight} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="70" />
+                  <label className={labelClass}>Weight (kg)</label>
+                  <input name="weight" type="number" value={formData.weight === undefined ? '' : formData.weight} onChange={handleChange} className={inputClass} placeholder="70" />
                 </div>
               </div>
             </div>
@@ -217,14 +251,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                {/* Goal */}
                <div>
-                 <label className="block text-sm font-semibold text-gray-700 mb-3">What is your main goal?</label>
+                 <label className={labelClass}>What is your main goal?</label>
                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                    {Object.values(Goal).map(g => (
                      <button 
                        key={g} 
                        type="button"
                        onClick={() => handleSelect('goal', g)}
-                       className={`p-3 rounded-xl border text-sm font-medium transition-all ${formData.goal === g ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'}`}
+                       className={`p-3 rounded-xl border text-sm font-medium transition-all ${formData.goal === g ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700'}`}
                      >
                        {g}
                      </button>
@@ -234,14 +268,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
                {/* Activity */}
                <div>
-                 <label className="block text-sm font-semibold text-gray-700 mb-3">Activity Level</label>
+                 <label className={labelClass}>Activity Level</label>
                  <div className="grid grid-cols-2 gap-3">
                     {Object.values(ActivityLevel).map(a => (
                       <button 
                        key={a} 
                        type="button"
                        onClick={() => handleSelect('activityLevel', a)}
-                       className={`p-3 rounded-xl border text-sm font-medium transition-all ${formData.activityLevel === a ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-200'}`}
+                       className={`p-3 rounded-xl border text-sm font-medium transition-all ${formData.activityLevel === a ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700'}`}
                      >
                        {a}
                      </button>
@@ -251,8 +285,8 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
                {/* Region */}
                <div>
-                 <label className="block text-sm font-semibold text-gray-700 mb-2">Region (for food recommendations)</label>
-                 <select name="region" value={formData.region} onChange={handleChange} className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                 <label className={labelClass}>Region (for food recommendations)</label>
+                 <select name="region" value={formData.region} onChange={handleChange} className={inputClass}>
                     <option value="North India">North India (Roti/Paratha dominant)</option>
                     <option value="South India">South India (Rice/Idli/Dosa dominant)</option>
                     <option value="West India (Gujarati/Marathi)">West India</option>
@@ -262,14 +296,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                
                {/* Budget */}
                <div>
-                 <label className="block text-sm font-semibold text-gray-700 mb-3">Monthly Food Budget</label>
+                 <label className={labelClass}>Monthly Food Budget</label>
                  <div className="grid grid-cols-3 gap-3">
                    {['low', 'medium', 'flexible'].map((b) => (
                       <button 
                        key={b} 
                        type="button"
                        onClick={() => handleSelect('budgetLevel', b)}
-                       className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${formData.budgetLevel === b ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-white text-gray-600 hover:bg-green-50 border-gray-200'}`}
+                       className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${formData.budgetLevel === b ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700'}`}
                      >
                        {b}
                      </button>
@@ -285,14 +319,14 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                
                {/* Dietary */}
                <div>
-                 <label className="block text-sm font-semibold text-gray-700 mb-3">Dietary Preference</label>
+                 <label className={labelClass}>Dietary Preference</label>
                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                    {Object.values(DietaryPreference).map(d => (
                       <button 
                        key={d} 
                        type="button"
                        onClick={() => handleSelect('dietaryPreference', d)}
-                       className={`p-2 rounded-xl border text-xs sm:text-sm font-medium transition-all ${formData.dietaryPreference === d ? 'bg-orange-500 text-white border-orange-500 shadow-md' : 'bg-white text-gray-600 hover:bg-orange-50 border-gray-200'}`}
+                       className={`p-2 rounded-xl border text-xs sm:text-sm font-medium transition-all ${formData.dietaryPreference === d ? 'bg-orange-500 text-white border-orange-500 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700'}`}
                      >
                        {d}
                      </button>
@@ -300,36 +334,73 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                  </div>
                </div>
 
+               {/* Allergies Section */}
+               <div>
+                  <label className={labelClass}>Allergies & Sensitivities</label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Select any foods we should exclude from your plan.
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {['Peanuts','Tree nuts','Milk','Eggs','Gluten','Soy','Seafood','None'].map(label => {
+                      const active = selectedAllergies.includes(label);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          onClick={() => toggleAllergy(label)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all
+                            ${active
+                              ? 'bg-red-50 border-red-400 text-red-700 dark:bg-red-900/30 dark:border-red-500 dark:text-red-200 shadow-sm'
+                              : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Other allergy details
+                  </label>
+                  <textarea
+                    className={`${inputClass} h-16 resize-none`}
+                    rows={2}
+                    value={allergyNotes}
+                    onChange={(e) => setAllergyNotes(e.target.value)}
+                    placeholder="E.g., avoid mushrooms, pineapple, etc."
+                  />
+               </div>
+
                {/* Body Analysis */}
-               <div className="bg-indigo-50 p-5 rounded-2xl border border-indigo-100">
+               <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
                   <div className="flex items-center justify-between mb-4">
-                     <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
+                     <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2">
                        <Camera className="w-4 h-4" /> AI Body Analysis
                      </h3>
-                     <span className="text-[10px] bg-indigo-200 text-indigo-800 px-2 py-1 rounded-full font-bold">OPTIONAL</span>
+                     <span className="text-[10px] bg-indigo-200 dark:bg-indigo-800 text-indigo-800 dark:text-indigo-200 px-2 py-1 rounded-full font-bold">OPTIONAL</span>
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                     <label className="cursor-pointer bg-white border border-indigo-200 text-indigo-700 px-4 py-2 rounded-lg flex items-center shadow-sm hover:bg-indigo-50 transition">
+                     <label className="cursor-pointer bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg flex items-center shadow-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition">
                         <Upload className="w-4 h-4 mr-2" />
                         {analyzing ? 'Analyzing...' : 'Upload Photo'}
                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={analyzing} />
                      </label>
-                     <p className="text-xs text-indigo-700/70">
+                     <p className="text-xs text-indigo-700/70 dark:text-indigo-300/70">
                         Upload a photo to let AI estimate your body type (Ecto/Meso/Endo).
                      </p>
                   </div>
 
                   {analysisResult && (
-                    <div className="mt-4 p-3 bg-white rounded-xl border border-indigo-200 text-sm text-gray-700">
-                       <p className="font-bold text-indigo-600 text-xs uppercase mb-1">Result:</p>
+                    <div className="mt-4 p-3 bg-white dark:bg-slate-800 rounded-xl border border-indigo-200 dark:border-slate-600 text-sm text-gray-700 dark:text-gray-300">
+                       <p className="font-bold text-indigo-600 dark:text-indigo-400 text-xs uppercase mb-1">Result:</p>
                        {analysisResult}
                     </div>
                   )}
 
                   <div className="mt-4">
-                    <label className="block text-xs font-semibold text-indigo-900 mb-1">Selected Body Type</label>
-                    <select name="bodyType" value={formData.bodyType} onChange={handleChange} className="w-full p-2 border border-indigo-200 rounded-lg bg-white text-sm">
+                    <label className="block text-xs font-semibold text-indigo-900 dark:text-indigo-300 mb-1">Selected Body Type</label>
+                    <select name="bodyType" value={formData.bodyType} onChange={handleChange} className={inputClass}>
                       {Object.values(BodyType).map(b => <option key={b} value={b}>{b}</option>)}
                     </select>
                   </div>
@@ -337,13 +408,13 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
                {/* Notes */}
                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Additional Notes (Optional)</label>
+                  <label className={labelClass}>Additional Notes (Optional)</label>
                   <textarea 
                     name="notes" 
                     value={formData.notes} 
                     onChange={handleChange} 
-                    className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm h-24 resize-none" 
-                    placeholder="E.g. I dislike dairy, or I have a knee injury..."
+                    className={`${inputClass} h-24 resize-none`} 
+                    placeholder="E.g. I have a knee injury, or general preferences..."
                   />
                </div>
             </div>
@@ -352,9 +423,9 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 bg-gray-50 border-t border-gray-100 flex justify-between items-center shrink-0">
+        <div className="p-6 bg-gray-50 dark:bg-slate-900/50 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           {step > 1 ? (
-             <button type="button" onClick={handleBack} className="flex items-center text-gray-500 hover:text-gray-800 font-medium px-4 py-2 transition">
+             <button type="button" onClick={handleBack} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white font-medium px-4 py-2 transition">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Back
              </button>
           ) : (

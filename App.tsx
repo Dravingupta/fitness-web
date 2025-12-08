@@ -8,6 +8,7 @@ import { UserProfile } from './types';
 
 type ViewState = 'landing' | 'auth' | 'profile' | 'dashboard';
 type ProfileMode = 'setup' | 'edit';
+type Theme = 'light' | 'dark';
 
 const App: React.FC = () => {
   const [uid, setUid] = useState<string | null>(null);
@@ -15,6 +16,34 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('landing');
   const [profileMode, setProfileMode] = useState<ProfileMode>('setup');
   const [loading, setLoading] = useState(true);
+  
+  // Theme State - Single Source of Truth
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const stored = window.localStorage.getItem('aiCoachTheme');
+    if (stored === 'light' || stored === 'dark') return stored;
+    
+    // Default to system preference if no stored value
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  });
+
+  // Apply Theme to Document Root
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('aiCoachTheme', theme);
+    const root = document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
   
   // Minimal data for setup (email/name from auth), Full data for edit
   const [initialProfileData, setInitialProfileData] = useState<Partial<UserProfile>>({});
@@ -112,10 +141,10 @@ const App: React.FC = () => {
     localStorage.removeItem('app_uid');
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-950"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
 
   return (
-    <>
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-gray-100 transition-colors duration-300">
       {currentView === 'landing' && (
         <LandingPage 
           onGoogleLogin={handleGoogleLoginMock}
@@ -141,9 +170,11 @@ const App: React.FC = () => {
           user={userProfile} 
           onLogout={handleLogout} 
           onEditProfile={handleEditProfile}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       )}
-    </>
+    </div>
   );
 };
 
