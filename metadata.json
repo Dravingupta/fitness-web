@@ -1,0 +1,5 @@
+{
+  "name": "Indian AI Fitness Coach",
+  "description": "An AI-powered fitness and nutrition coach tailored for Indian users, featuring personalized diet plans, home workouts, and body type analysis using Gemini.",
+  "requestFramePermissions": []
+}
