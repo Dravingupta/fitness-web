@@ -30,7 +30,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoogleLogin, onEmailLoginCl
       </nav>
 
       {/* Hero Section */}
-      <section className="relative pt-16 pb-24 overflow-hidden">
+      <section className="relative pt-12 pb-20 sm:pt-16 sm:pb-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
           
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -38,25 +38,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGoogleLogin, onEmailLoginCl
              Powered by Gemini 3 Pro
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight max-w-4xl animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight max-w-4xl animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
             Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Indian Fitness Coach</span>
           </h1>
           
-          <p className="text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
             Get personalized diet plans with local Indian foods, home workouts, and real-time coaching—all powered by advanced AI.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center animate-in fade-in slide-in-from-bottom-7 duration-700 delay-300">
             <button 
               onClick={onGoogleLogin}
-              className="flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 px-8 py-4 rounded-xl font-bold shadow-sm transition-all transform hover:-translate-y-1"
+              className="flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-200 hover:bg-gray-50 hover:border-gray-300 px-8 py-4 rounded-xl font-bold shadow-sm transition-all transform hover:-translate-y-1 w-full sm:w-auto"
             >
               <Chrome className="w-5 h-5 text-red-500" />
               Continue with Google
             </button>
             <button 
               onClick={onEmailLoginClick}
-              className="flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-1"
+              className="flex items-center justify-center gap-2 bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all transform hover:-translate-y-1 w-full sm:w-auto"
             >
               Use Email <ArrowRight className="w-5 h-5" />
             </button>

@@ -616,6 +616,28 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
     );
   };
 
+  const renderGenerateButton = (isLoading: boolean, handler: () => void, label: string, type: string) => {
+    if (!isToday) return null;
+    
+    // Determine if plan exists
+    const hasPlan = type === 'diet' ? !!currentDietPlan : !!currentWorkoutPlan;
+
+    // Remove the button if a plan already exists
+    if (hasPlan) return null;
+    
+    return (
+      <button 
+        onClick={handler} 
+        disabled={isLoading}
+        className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 disabled:opacity-50 transition bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md"
+        title="Generate Plan"
+      >
+        <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+        <span className="hidden sm:inline">{isLoading ? 'Working...' : 'Generate'}</span>
+        <span className="sm:hidden">{isLoading ? '...' : <RefreshCw className="w-3.5 h-3.5"/>}</span>
+      </button>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col font-inter text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -655,11 +677,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                   {isMenuOpen && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setIsMenuOpen(false)}></div>
-                      <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl text-sm z-20">
+                      <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl text-sm z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                        {/* Mobile Menu Header with User Info */}
+                        <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-800/50 rounded-t-xl">
+                            <p className="font-bold text-gray-900 dark:text-white">{user.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email || 'User'}</p>
+                        </div>
                         <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2">
                           <Settings className="w-4 h-4 text-gray-400" /> Edit Profile
                         </button>
-                        <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700">
+                        <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700 rounded-b-xl">
                           <LogOut className="w-4 h-4" /> Logout
                         </button>
                       </div>
@@ -722,7 +749,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                           <button onClick={() => { setIsMenuOpen(false); onEditProfile(); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 flex items-center gap-2">
                             <Settings className="w-4 h-4 text-gray-400" /> Edit Profile
                           </button>
-                          <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700">
+                          <button onClick={() => { setIsMenuOpen(false); onLogout(); }} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-gray-100 dark:border-slate-700 rounded-b-xl">
                             <LogOut className="w-4 h-4" /> Logout
                           </button>
                         </div>
@@ -806,6 +833,32 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
           </div>
         </div>
 
+        {/* Weekly Summary */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 mb-6 transition-colors duration-300">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">This week so far</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{weeklyVerdict}</p>
+            </div>
+            <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
+               <div className="text-center sm:text-right">
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">In</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalConsumed.toLocaleString()}</span>
+               </div>
+               <div className="text-center sm:text-right">
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Out</span>
+                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalBurned.toLocaleString()}</span>
+               </div>
+               <div className="text-center sm:text-right">
+                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Net</span>
+                  <span className={`font-bold ${weeklyStats.net > weeklyStats.totalTarget ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                    {weeklyStats.net > 0 ? '+' : ''}{weeklyStats.net.toLocaleString()}
+                  </span>
+               </div>
+            </div>
+          </div>
+        </div>
+
         {/* Unified Tabs */}
         <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-xl mb-6 transition-colors duration-300 overflow-x-auto">
            {(['meals', 'workout', 'coach'] as const).map(section => (
@@ -833,7 +886,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                        <Utensils className="w-4 h-4 text-orange-500" />
                        Your Meals
                      </h2>
-                     {/* Removed Refresh Button per request */}
+                     {renderGenerateButton(loadingDiet, handleGenerateDiet, "Diet Plan", "diet")}
                   </div>
                   
                   <div className="flex-1 p-4">
@@ -868,7 +921,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                        <Dumbbell className="w-4 h-4 text-blue-500" />
                        Your Workout
                      </h2>
-                     {/* Removed Refresh Button per request */}
+                     {renderGenerateButton(loadingWorkout, handleGenerateWorkout, "Workout Plan", "workout")}
                   </div>
                   
                   <div className="flex-1 p-4">

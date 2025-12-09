@@ -197,35 +197,35 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-10 px-4 flex items-center justify-center transition-colors">
-      <div className="max-w-3xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 py-4 sm:py-10 px-4 flex items-center justify-center transition-colors">
+      <div className="max-w-3xl w-full bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col transition-colors h-[90vh] sm:h-auto">
         
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-8 text-white shrink-0">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-3xl font-bold">
+        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 sm:p-8 text-white shrink-0">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold">
               {isEdit ? 'Update Your Profile' : 'Let’s Personalize Your Plan'}
             </h2>
             <div className="bg-white/20 p-2 rounded-full hidden sm:block">
               {step === 1 ? <User className="w-6 h-6" /> : step === 2 ? <Target className="w-6 h-6" /> : <Utensils className="w-6 h-6" />}
             </div>
           </div>
-          <p className="text-indigo-100 text-lg">
+          <p className="text-indigo-100 text-sm sm:text-lg">
              {step === 1 ? "Tell us about yourself so we can get started." : step === 2 ? "What are your fitness goals?" : "Refine your food preferences."}
           </p>
         </div>
 
         {/* Stepper */}
-        <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
+        <div className="flex items-center justify-between px-4 sm:px-8 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
           <StepIndicator num={1} label="Basic Info" active={step >= 1} />
-          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 2 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
+          <div className={`h-0.5 flex-1 mx-2 sm:mx-4 transition-colors ${step >= 2 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
           <StepIndicator num={2} label="Goals & Workout" active={step >= 2} />
-          <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 3 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
+          <div className={`h-0.5 flex-1 mx-2 sm:mx-4 transition-colors ${step >= 3 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
           <StepIndicator num={3} label="Diet & Macros" active={step >= 3} />
         </div>
 
         {/* Form Content */}
-        <div className="p-8 flex-1 overflow-y-auto">
+        <div className="p-6 sm:p-8 flex-1 overflow-y-auto">
           
           {/* Error Banner */}
           {error && (
@@ -243,7 +243,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                 <input name="name" type="text" value={formData.name} onChange={handleChange} className={inputClass} placeholder="e.g. Rahul Kumar" />
               </div>
               
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                  <div>
                   <label className={labelClass}>Age</label>
                   <input name="age" type="number" value={formData.age === undefined ? '' : formData.age} onChange={handleChange} className={inputClass} placeholder="25" />
@@ -258,7 +258,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                  <div>
                   <label className={labelClass}>Height (cm)</label>
                   <input name="height" type="number" value={formData.height === undefined ? '' : formData.height} onChange={handleChange} className={inputClass} placeholder="175" />
@@ -311,7 +311,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                {/* Workout Preference (New) */}
                <div>
                  <label className={labelClass}>Where do you prefer to workout?</label>
-                 <div className="grid grid-cols-2 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                    <button
                      type="button"
                      onClick={() => handleSelect('workoutPreference', 'Home')}
@@ -456,13 +456,13 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                     <label className="cursor-pointer bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg flex items-center shadow-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition">
+                     <label className="cursor-pointer bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-lg flex items-center shadow-sm hover:bg-indigo-50 dark:hover:bg-slate-700 transition w-full sm:w-auto justify-center">
                         <Upload className="w-4 h-4 mr-2" />
                         {analyzing ? 'Analyzing...' : 'Upload Photo'}
                         <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={analyzing} />
                      </label>
                      <p className="text-xs text-indigo-700/70 dark:text-indigo-300/70">
-                        Upload a photo to let AI estimate your body type (Ecto/Meso/Endo).
+                        Upload a photo to let AI estimate your body type.
                      </p>
                   </div>
 
