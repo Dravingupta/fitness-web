@@ -44,6 +44,15 @@ export interface UserProfile {
   notes?: string;
   allergies?: string[];   // list of allergens
   allergyNotes?: string;  // free-text notes
+  
+  // New Features
+  workoutPreference: 'Home' | 'Gym';
+  macroMode: 'auto' | 'custom';
+  customMacros?: {
+    protein: number;
+    carbs: number;
+    fats: number;
+  };
 }
 
 // --- Detailed Diet Types ---
@@ -116,6 +125,7 @@ export interface ManualWorkout {
 
 export interface WorkoutPlan {
   date?: string;
+  focus?: string; // e.g. "Chest & Triceps"
   duration: string;
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   warmup: string[];

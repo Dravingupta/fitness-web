@@ -1,8 +1,8 @@
 
-import React, { useState, useEffect } from 'react';
-import { UserProfile, DietPlan, WorkoutPlan, DailyTracking, ManualMeal, ManualWorkout, MealItem, WorkoutExercise } from '../types';
-import { generateDietPlan, generateWorkoutPlan, swapMeal } from '../services/geminiService';
-import { RefreshCw, Calendar, ChevronLeft, ChevronRight, Activity, TrendingDown, TrendingUp, LogOut, Settings, Plus, Dumbbell, Utensils, Award, Flame, Zap, User as UserIcon, Moon, Sun } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { UserProfile, DietPlan, WorkoutPlan, DailyTracking, ManualMeal, ManualWorkout, MealItem, WorkoutExercise, ChatMessage } from '../types';
+import { generateDietPlan, generateWeeklyWorkoutPlan, swapMeal } from '../services/geminiService';
+import { RefreshCw, Calendar, ChevronLeft, ChevronRight, Activity, TrendingDown, TrendingUp, LogOut, Settings, Plus, Dumbbell, Utensils, Award, Flame, Zap, User as UserIcon, Moon, Sun, Lock } from 'lucide-react';
 import ChatCoach from './ChatCoach';
 import DietCard, { AddMealModal } from './DietCard';
 import WorkoutCard, { AddWorkoutModal } from './WorkoutCard';
@@ -114,6 +114,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
   const [manualMealsHistory, setManualMealsHistory] = useState<Record<string, ManualMeal[]>>({});
   const [manualWorkoutsHistory, setManualWorkoutsHistory] = useState<Record<string, ManualWorkout[]>>({});
 
+  // Chat History Persistence
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+
   // Loading States
   const [loadingDiet, setLoadingDiet] = useState(false);
   const [loadingWorkout, setLoadingWorkout] = useState(false);
@@ -124,60 +127,199 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
   const getTrackingKey = (date: string) => `aiCoachTracking_${user.uid}_${date}`;
   const getManualMealsKey = (date: string) => `aiCoachManualMeals_${user.uid}_${date}`;
   const getManualWorkoutsKey = (date: string) => `aiCoachManualWorkouts_${user.uid}_${date}`;
+  const getChatKey = () => `aiCoachChat_${user.uid}`;
 
-  // --- Load Data for Selected Date ---
+  // --- Date Logic Helpers ---
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isToday = selectedDate === todayStr;
+  const isPast = selectedDate < todayStr;
+  const isFuture = selectedDate > todayStr;
+
+  // --- Handlers (Defined before useEffect to be used inside) ---
+
+  const initTrackingIfMissing = (date: string, targetCalories: number) => {
+    const key = getTrackingKey(date);
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setTrackingHistory(prev => ({ ...prev, [date]: JSON.parse(saved) }));
+    } else {
+      const newTracking: DailyTracking = {
+        date: date,
+        completedMealIds: [],
+        completedExerciseIds: [],
+        totalTargetCalories: targetCalories,
+        totalEstimatedCaloriesConsumed: 0,
+        totalEstimatedCaloriesBurned: 0,
+        calorieDeficit: 0,
+        netCalories: 0
+      };
+      localStorage.setItem(key, JSON.stringify(newTracking));
+      setTrackingHistory(prev => ({ ...prev, [date]: newTracking }));
+    }
+  };
+
+  const handleGenerateDiet = useCallback(async () => {
+    // RESTRICTION: Only allow generation for Today.
+    if (!isToday) {
+      return; 
+    }
+
+    const dietKey = getDietKey(selectedDate);
+    
+    // FAIL-SAFE: Check storage first to prevent overwriting existing data
+    const existing = localStorage.getItem(dietKey);
+    if (existing) {
+      const parsedPlan = JSON.parse(existing);
+      setDietHistory(prev => ({ ...prev, [selectedDate]: parsedPlan }));
+      // Ensure tracking is initialized for this existing plan
+      initTrackingIfMissing(selectedDate, parsedPlan.totalCalories);
+      return; 
+    }
+
+    setLoadingDiet(true);
+    try {
+      const plan = await generateDietPlan(user);
+      const planWithDate = { ...plan, date: selectedDate };
+      
+      localStorage.setItem(dietKey, JSON.stringify(planWithDate));
+      setDietHistory(prev => ({ ...prev, [selectedDate]: planWithDate }));
+      
+      // Init tracking target
+      initTrackingIfMissing(selectedDate, plan.totalCalories);
+
+    } catch (error) {
+      console.error(error);
+      alert('Failed to generate diet plan');
+    } finally {
+      setLoadingDiet(false);
+    }
+  }, [selectedDate, user, isToday]);
+
+  const handleGenerateWorkout = useCallback(async () => {
+    // RESTRICTION: Only allow generation for Today.
+    if (!isToday) return;
+
+    // 1. Check if workout already exists for TODAY
+    const workoutKey = getWorkoutKey(selectedDate);
+    const existing = localStorage.getItem(workoutKey);
+    if (existing) {
+      setWorkoutHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(existing) }));
+      return;
+    }
+
+    // 2. If NOT, generate a full Weekly Split starting from today
+    setLoadingWorkout(true);
+    try {
+      // Call service to get 7 days of workouts
+      const weekPlans = await generateWeeklyWorkoutPlan(user, selectedDate);
+      
+      // 3. Save ALL 7 days to localStorage
+      const startDate = new Date(selectedDate);
+      
+      weekPlans.forEach((dayPlan, index) => {
+          // Calculate the specific date for this plan
+          const d = new Date(startDate);
+          d.setDate(d.getDate() + index);
+          const dateStr = d.toISOString().split('T')[0];
+          
+          const planWithDate = { ...dayPlan, date: dateStr };
+          const key = getWorkoutKey(dateStr);
+          
+          // Only overwrite if not exists (or we can overwrite to ensure the split is cohesive)
+          localStorage.setItem(key, JSON.stringify(planWithDate));
+          
+          // Update local state if it matches current selected date
+          if (dateStr === selectedDate) {
+              setWorkoutHistory(prev => ({ ...prev, [dateStr]: planWithDate }));
+          }
+      });
+
+    } catch (error) {
+      console.error(error);
+      alert('Failed to generate workout plan');
+    } finally {
+      setLoadingWorkout(false);
+    }
+  }, [selectedDate, user, isToday]);
+
+  const updateChatHistory = (newMessages: ChatMessage[]) => {
+    setChatHistory(newMessages);
+    localStorage.setItem(getChatKey(), JSON.stringify(newMessages));
+  };
+
+  // --- Unified Data Loading & Synchronization ---
   useEffect(() => {
-    const loadDataForDate = () => {
-      // 1. Diet Plan
-      const savedDiet = localStorage.getItem(getDietKey(selectedDate));
+    const loadAndSync = async () => {
+      // 1. Load Manual Entries (Always load these first as they don't depend on AI)
+      const mmKey = getManualMealsKey(selectedDate);
+      const mwKey = getManualWorkoutsKey(selectedDate);
+      const savedMM = localStorage.getItem(mmKey);
+      const savedMW = localStorage.getItem(mwKey);
+      
+      if (savedMM) setManualMealsHistory(prev => ({...prev, [selectedDate]: JSON.parse(savedMM)}));
+      if (savedMW) setManualWorkoutsHistory(prev => ({...prev, [selectedDate]: JSON.parse(savedMW)}));
+
+      // 2. Load Diet Plan
+      const dietKey = getDietKey(selectedDate);
+      const savedDiet = localStorage.getItem(dietKey);
+      let dietLoaded = false;
+      
       if (savedDiet) {
-        setDietHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(savedDiet) }));
-      }
+        const parsedDiet = JSON.parse(savedDiet);
+        setDietHistory(prev => ({...prev, [selectedDate]: parsedDiet}));
+        dietLoaded = true;
+        // Ensure tracking exists
+        initTrackingIfMissing(selectedDate, parsedDiet.totalCalories);
+      } 
 
-      // 2. Workout Plan
-      const savedWorkout = localStorage.getItem(getWorkoutKey(selectedDate));
+      // 3. Load Workout Plan
+      const workoutKey = getWorkoutKey(selectedDate);
+      const savedWorkout = localStorage.getItem(workoutKey);
+      let workoutLoaded = false;
+      
       if (savedWorkout) {
-        setWorkoutHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(savedWorkout) }));
+        setWorkoutHistory(prev => ({...prev, [selectedDate]: JSON.parse(savedWorkout)}));
+        workoutLoaded = true;
       }
 
-      // 3. Tracking
-      const savedTracking = localStorage.getItem(getTrackingKey(selectedDate));
-      if (savedTracking) {
-        setTrackingHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(savedTracking) }));
+      // 4. Load Tracking
+      const trackKey = getTrackingKey(selectedDate);
+      const savedTrack = localStorage.getItem(trackKey);
+      if (savedTrack) {
+        setTrackingHistory(prev => ({...prev, [selectedDate]: JSON.parse(savedTrack)}));
       }
 
-      // 4. Manual Meals
-      const savedManualMeals = localStorage.getItem(getManualMealsKey(selectedDate));
-      if (savedManualMeals) {
-        setManualMealsHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(savedManualMeals) }));
+      // 5. Load Chat History (once)
+      if (chatHistory.length === 0) {
+        const savedChat = localStorage.getItem(getChatKey());
+        if (savedChat) {
+          setChatHistory(JSON.parse(savedChat));
+        } else {
+          // Initialize default chat
+          const initialMsg: ChatMessage = {
+             role: 'model',
+             text: `Namaste ${user.name}! I am your AI Coach. I can help swap meals, explain exercises, or give motivation.`,
+             timestamp: Date.now()
+          };
+          setChatHistory([initialMsg]);
+          // Don't save to localStorage yet, wait for user interaction or save explicitly
+        }
       }
 
-      // 5. Manual Workouts
-      const savedManualWorkouts = localStorage.getItem(getManualWorkoutsKey(selectedDate));
-      if (savedManualWorkouts) {
-        setManualWorkoutsHistory(prev => ({ ...prev, [selectedDate]: JSON.parse(savedManualWorkouts) }));
+      // 6. Auto-Generate ONLY if Today and Missing (and not already loading)
+      if (isToday) {
+        if (!dietLoaded && !savedDiet && !loadingDiet) {
+           handleGenerateDiet();
+        }
+        if (!workoutLoaded && !savedWorkout && !loadingWorkout) {
+           handleGenerateWorkout();
+        }
       }
     };
 
-    loadDataForDate();
-    
+    loadAndSync();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, user.uid]);
-
-  // --- Auto-Generate Logic ---
-  useEffect(() => {
-    const isToday = selectedDate === new Date().toISOString().split('T')[0];
-    const diet = dietHistory[selectedDate];
-    const workout = workoutHistory[selectedDate];
-
-    if (isToday && !diet && !loadingDiet) {
-      handleGenerateDiet();
-    }
-    if (isToday && !workout && !loadingWorkout) {
-      handleGenerateWorkout();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, dietHistory, workoutHistory]);
+  }, [selectedDate, user.uid]); // Minimal deps to avoid loops
 
   // --- Derived State for Current View ---
   const currentDietPlan = dietHistory[selectedDate] || null;
@@ -202,58 +344,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
     localStorage.setItem(getTrackingKey(selectedDate), JSON.stringify(tracking));
   };
 
-  // --- Handlers ---
-
   const handleDateChange = (days: number) => {
     const date = new Date(selectedDate);
     date.setDate(date.getDate() + days);
     setSelectedDate(date.toISOString().split('T')[0]);
-  };
-
-  const handleGenerateDiet = async () => {
-    setLoadingDiet(true);
-    try {
-      const plan = await generateDietPlan(user);
-      const planWithDate = { ...plan, date: selectedDate };
-      
-      localStorage.setItem(getDietKey(selectedDate), JSON.stringify(planWithDate));
-      setDietHistory(prev => ({ ...prev, [selectedDate]: planWithDate }));
-      
-      // Init tracking target
-      setTrackingHistory(prev => {
-        const existing = prev[selectedDate] || {
-          date: selectedDate,
-          completedMealIds: [],
-          completedExerciseIds: [],
-          totalEstimatedCaloriesConsumed: 0,
-          totalEstimatedCaloriesBurned: 0,
-        };
-        const updated = { ...existing, totalTargetCalories: plan.totalCalories };
-        localStorage.setItem(getTrackingKey(selectedDate), JSON.stringify(updated));
-        return { ...prev, [selectedDate]: updated };
-      });
-
-    } catch (error) {
-      console.error(error);
-      alert('Failed to generate diet plan');
-    } finally {
-      setLoadingDiet(false);
-    }
-  };
-
-  const handleGenerateWorkout = async () => {
-    setLoadingWorkout(true);
-    try {
-      const plan = await generateWorkoutPlan(user);
-      const planWithDate = { ...plan, date: selectedDate };
-      localStorage.setItem(getWorkoutKey(selectedDate), JSON.stringify(planWithDate));
-      setWorkoutHistory(prev => ({ ...prev, [selectedDate]: planWithDate }));
-    } catch (error) {
-      console.error(error);
-      alert('Failed to generate workout plan');
-    } finally {
-      setLoadingWorkout(false);
-    }
   };
 
   const handleSwapMeal = async (mealId: string) => {
@@ -355,7 +449,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
   };
 
   // --- Helpers & Visual Logic ---
-  const isToday = selectedDate === new Date().toISOString().split('T')[0];
   const formattedDate = new Date(selectedDate).toLocaleDateString('en-IN', { 
     weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' 
   });
@@ -493,6 +586,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
   } else if (weeklyStats.net > weeklyStats.totalTarget) {
     weeklyVerdict = "Slightly above target this week – tighten up a bit.";
   }
+
+  // Render Empty State Logic
+  const renderEmptyState = (handler: () => void, label: string) => {
+    if (isPast) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <Lock className="w-8 h-8 mb-2 opacity-50" />
+          <p className="mb-4">No plan was recorded for this date.</p>
+        </div>
+      );
+    }
+    if (isFuture) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+          <Lock className="w-8 h-8 mb-2 opacity-50" />
+          <p className="mb-4">Plan locked. Come back on this day to generate.</p>
+        </div>
+      );
+    }
+    // Only show Generate button if isToday
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+        <p className="mb-4">No {label} plan generated.</p>
+        <button onClick={handler} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+          Generate {label} Plan
+        </button>
+      </div>
+    );
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col font-inter text-gray-900 dark:text-gray-100 transition-colors duration-300">
@@ -683,32 +806,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
           </div>
         </div>
 
-        {/* Weekly Summary */}
-        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 mb-6 transition-colors duration-300">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">This week so far</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{weeklyVerdict}</p>
-            </div>
-            <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
-               <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">In</span>
-                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalConsumed.toLocaleString()}</span>
-               </div>
-               <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Out</span>
-                  <span className="font-bold text-gray-900 dark:text-white">{weeklyStats.totalBurned.toLocaleString()}</span>
-               </div>
-               <div className="text-center sm:text-right">
-                  <span className="block text-xs text-gray-400 dark:text-gray-500 font-medium">Net</span>
-                  <span className={`font-bold ${weeklyStats.net > weeklyStats.totalTarget ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
-                    {weeklyStats.net > 0 ? '+' : ''}{weeklyStats.net.toLocaleString()}
-                  </span>
-               </div>
-            </div>
-          </div>
-        </div>
-
         {/* Unified Tabs */}
         <div className="flex p-1 bg-gray-100 dark:bg-slate-800 rounded-xl mb-6 transition-colors duration-300 overflow-x-auto">
            {(['meals', 'workout', 'coach'] as const).map(section => (
@@ -736,9 +833,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                        <Utensils className="w-4 h-4 text-orange-500" />
                        Your Meals
                      </h2>
-                     <button onClick={() => window.confirm('Regenerate Diet Plan?') && handleGenerateDiet()} disabled={loadingDiet} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 p-1.5 rounded-lg transition">
-                       <RefreshCw className={`w-4 h-4 ${loadingDiet ? 'animate-spin' : ''}`} />
-                     </button>
+                     {/* Removed Refresh Button per request */}
                   </div>
                   
                   <div className="flex-1 p-4">
@@ -758,10 +853,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                         swappingMealId={swappingMealId}
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                        <p className="mb-4">No diet plan generated.</p>
-                        <button onClick={handleGenerateDiet} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Plan</button>
-                      </div>
+                      renderEmptyState(handleGenerateDiet, "diet")
                     )}
                   </div>
                 </div>
@@ -776,16 +868,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                        <Dumbbell className="w-4 h-4 text-blue-500" />
                        Your Workout
                      </h2>
-                     <button onClick={handleGenerateWorkout} disabled={loadingWorkout} className="text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700 p-1.5 rounded-lg transition">
-                       <RefreshCw className={`w-4 h-4 ${loadingWorkout ? 'animate-spin' : ''}`} />
-                     </button>
+                     {/* Removed Refresh Button per request */}
                   </div>
                   
                   <div className="flex-1 p-4">
                      {loadingWorkout ? (
                        <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
                           <RefreshCw className="w-8 h-8 animate-spin mb-2 opacity-50" />
-                          <p>Training AI is preparing...</p>
+                          <p>Training AI is preparing a weekly split...</p>
                        </div>
                     ) : currentWorkoutPlan ? (
                       <WorkoutCard 
@@ -797,10 +887,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                         userWeight={user.weight}
                       />
                     ) : (
-                      <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                        <p className="mb-4">No workout plan generated.</p>
-                        <button onClick={handleGenerateWorkout} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">Generate Workout</button>
-                      </div>
+                      renderEmptyState(handleGenerateWorkout, "workout")
                     )}
                   </div>
                 </div>
@@ -814,7 +901,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onEditProfile, th
                      <Award className="w-4 h-4 text-yellow-500" /> Ask Guru-ji
                   </div>
                   <div className="flex-1 overflow-hidden">
-                     <ChatCoach user={user} />
+                     <ChatCoach 
+                      user={user} 
+                      messages={chatHistory} 
+                      onUpdateMessages={updateChatHistory} 
+                    />
                   </div>
                 </div>
              </div>

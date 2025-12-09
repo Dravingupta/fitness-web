@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserProfile, DietaryPreference, Goal, ActivityLevel, BodyType } from '../types';
 import { analyzeBodyImage } from '../services/geminiService';
-import { Loader2, Camera, Upload, ChevronLeft, ChevronRight, Check, User, Target, Utensils, AlertCircle } from 'lucide-react';
+import { Loader2, Camera, Upload, ChevronLeft, ChevronRight, Check, User, Target, Utensils, AlertCircle, Dumbbell } from 'lucide-react';
 
 interface ProfileFormProps {
   uid: string;
@@ -24,10 +24,19 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
     region: 'North India',
     gender: 'Male',
     budgetLevel: 'medium',
+    workoutPreference: 'Home',
+    macroMode: 'auto',
     name: '',
     email: '',
     notes: '',
     ...initialData,
+  });
+
+  // Custom Macros State
+  const [customMacros, setCustomMacros] = useState({
+    protein: initialData?.customMacros?.protein || 0,
+    carbs: initialData?.customMacros?.carbs || 0,
+    fats: initialData?.customMacros?.fats || 0,
   });
 
   // Allergy State
@@ -43,6 +52,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
       if (initialData.bodyAnalysis) setAnalysisResult(initialData.bodyAnalysis);
       if (initialData.allergies) setSelectedAllergies(initialData.allergies);
       if (initialData.allergyNotes) setAllergyNotes(initialData.allergyNotes);
+      if (initialData.customMacros) setCustomMacros(initialData.customMacros);
     }
   }, [initialData]);
 
@@ -58,6 +68,11 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
     if (error) setError(null); // Clear error on user interaction
+  };
+
+  const handleMacroChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+     const { name, value } = e.target;
+     setCustomMacros(prev => ({ ...prev, [name]: Number(value) }));
   };
 
   const handleSelect = (name: string, value: any) => {
@@ -149,10 +164,20 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
 
   const handleSubmit = (e?: React.MouseEvent) => {
     e?.preventDefault();
+    
+    // Validate macros if custom
+    if (formData.macroMode === 'custom') {
+       if (!customMacros.protein || !customMacros.carbs || !customMacros.fats) {
+         setError("Please enter all macro targets (Protein, Carbs, Fats) or switch to Auto.");
+         return;
+       }
+    }
+
     const finalProfile: UserProfile = {
        ...(formData as UserProfile),
        allergies: selectedAllergies.filter(a => a !== 'None'),
-       allergyNotes: allergyNotes
+       allergyNotes: allergyNotes,
+       customMacros: formData.macroMode === 'custom' ? customMacros : undefined
     };
     onSave(finalProfile);
   };
@@ -194,9 +219,9 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
         <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100 dark:border-slate-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
           <StepIndicator num={1} label="Basic Info" active={step >= 1} />
           <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 2 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
-          <StepIndicator num={2} label="Goals" active={step >= 2} />
+          <StepIndicator num={2} label="Goals & Workout" active={step >= 2} />
           <div className={`h-0.5 flex-1 mx-4 transition-colors ${step >= 3 ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-gray-200 dark:bg-slate-700'}`}></div>
-          <StepIndicator num={3} label="Preferences" active={step >= 3} />
+          <StepIndicator num={3} label="Diet & Macros" active={step >= 3} />
         </div>
 
         {/* Form Content */}
@@ -246,7 +271,7 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
             </div>
           )}
 
-          {/* STEP 2: GOALS & LIFESTYLE */}
+          {/* STEP 2: GOALS & WORKOUT */}
           {step === 2 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                {/* Goal */}
@@ -283,37 +308,35 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                  </div>
                </div>
 
-               {/* Region */}
+               {/* Workout Preference (New) */}
                <div>
-                 <label className={labelClass}>Region (for food recommendations)</label>
-                 <select name="region" value={formData.region} onChange={handleChange} className={inputClass}>
-                    <option value="North India">North India (Roti/Paratha dominant)</option>
-                    <option value="South India">South India (Rice/Idli/Dosa dominant)</option>
-                    <option value="West India (Gujarati/Marathi)">West India</option>
-                    <option value="East India (Bengali/Odia)">East India</option>
-                 </select>
-               </div>
-               
-               {/* Budget */}
-               <div>
-                 <label className={labelClass}>Monthly Food Budget</label>
-                 <div className="grid grid-cols-3 gap-3">
-                   {['low', 'medium', 'flexible'].map((b) => (
-                      <button 
-                       key={b} 
-                       type="button"
-                       onClick={() => handleSelect('budgetLevel', b)}
-                       className={`p-3 rounded-xl border text-sm font-medium capitalize transition-all ${formData.budgetLevel === b ? 'bg-green-600 text-white border-green-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-slate-800 border-gray-200 dark:border-slate-700'}`}
-                     >
-                       {b}
-                     </button>
-                   ))}
+                 <label className={labelClass}>Where do you prefer to workout?</label>
+                 <div className="grid grid-cols-2 gap-4">
+                   <button
+                     type="button"
+                     onClick={() => handleSelect('workoutPreference', 'Home')}
+                     className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.workoutPreference === 'Home' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                   >
+                     <User className="w-6 h-6" />
+                     <span className="font-semibold text-sm">Home Workout</span>
+                   </button>
+                   <button
+                     type="button"
+                     onClick={() => handleSelect('workoutPreference', 'Gym')}
+                     className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${formData.workoutPreference === 'Gym' ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white dark:bg-slate-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-800'}`}
+                   >
+                     <Dumbbell className="w-6 h-6" />
+                     <span className="font-semibold text-sm">Gym / Fitness Center</span>
+                   </button>
                  </div>
+                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {formData.workoutPreference === 'Gym' ? 'We will generate a structured 6-day split (e.g. Chest, Back, Legs).' : 'We will generate effective bodyweight or minimal equipment routines.'}
+                 </p>
                </div>
             </div>
           )}
 
-          {/* STEP 3: PREFERENCES & AI */}
+          {/* STEP 3: DIET & MACROS */}
           {step === 3 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                
@@ -334,12 +357,47 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                  </div>
                </div>
 
+               {/* Macros (New) */}
+               <div>
+                 <label className={labelClass}>Nutrition Targets</label>
+                 <div className="flex bg-gray-100 dark:bg-slate-800 p-1 rounded-xl mb-4">
+                   <button 
+                      type="button"
+                      onClick={() => handleSelect('macroMode', 'auto')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.macroMode === 'auto' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}
+                   >
+                     Auto (AI Calculated)
+                   </button>
+                   <button 
+                      type="button"
+                      onClick={() => handleSelect('macroMode', 'custom')}
+                      className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.macroMode === 'custom' ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400'}`}
+                   >
+                     Custom Macros
+                   </button>
+                 </div>
+
+                 {formData.macroMode === 'custom' && (
+                    <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-slate-900/50 border border-gray-200 dark:border-slate-800 rounded-xl animate-in slide-in-from-top-2">
+                       <div>
+                          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Protein (g)</label>
+                          <input type="number" name="protein" value={customMacros.protein} onChange={handleMacroChange} className={inputClass} />
+                       </div>
+                       <div>
+                          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Carbs (g)</label>
+                          <input type="number" name="carbs" value={customMacros.carbs} onChange={handleMacroChange} className={inputClass} />
+                       </div>
+                       <div>
+                          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">Fats (g)</label>
+                          <input type="number" name="fats" value={customMacros.fats} onChange={handleMacroChange} className={inputClass} />
+                       </div>
+                    </div>
+                 )}
+               </div>
+
                {/* Allergies Section */}
                <div>
                   <label className={labelClass}>Allergies & Sensitivities</label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Select any foods we should exclude from your plan.
-                  </p>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {['Peanuts','Tree nuts','Milk','Eggs','Gluten','Soy','Seafood','None'].map(label => {
                       const active = selectedAllergies.includes(label);
@@ -358,19 +416,36 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                       );
                     })}
                   </div>
-                  
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                    Other allergy details
-                  </label>
                   <textarea
                     className={`${inputClass} h-16 resize-none`}
                     rows={2}
                     value={allergyNotes}
                     onChange={(e) => setAllergyNotes(e.target.value)}
-                    placeholder="E.g., avoid mushrooms, pineapple, etc."
+                    placeholder="Other allergy details..."
                   />
                </div>
 
+               {/* Region & Budget */}
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 <div>
+                   <label className={labelClass}>Region</label>
+                   <select name="region" value={formData.region} onChange={handleChange} className={inputClass}>
+                      <option value="North India">North India</option>
+                      <option value="South India">South India</option>
+                      <option value="West India">West India</option>
+                      <option value="East India">East India</option>
+                   </select>
+                 </div>
+                 <div>
+                   <label className={labelClass}>Budget</label>
+                   <select name="budgetLevel" value={formData.budgetLevel} onChange={handleChange} className={inputClass}>
+                      <option value="low">Low (Budget Friendly)</option>
+                      <option value="medium">Medium</option>
+                      <option value="flexible">Flexible</option>
+                   </select>
+                 </div>
+               </div>
+               
                {/* Body Analysis */}
                <div className="bg-indigo-50 dark:bg-indigo-900/20 p-5 rounded-2xl border border-indigo-100 dark:border-indigo-800/30">
                   <div className="flex items-center justify-between mb-4">
@@ -406,17 +481,6 @@ const ProfileForm: React.FC<ProfileFormProps> = ({ uid, mode, initialData, onSav
                   </div>
                </div>
 
-               {/* Notes */}
-               <div>
-                  <label className={labelClass}>Additional Notes (Optional)</label>
-                  <textarea 
-                    name="notes" 
-                    value={formData.notes} 
-                    onChange={handleChange} 
-                    className={`${inputClass} h-24 resize-none`} 
-                    placeholder="E.g. I have a knee injury, or general preferences..."
-                  />
-               </div>
             </div>
           )}
 

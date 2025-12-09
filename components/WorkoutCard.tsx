@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { WorkoutPlan, ManualWorkout } from '../types';
-import { Clock, TrendingUp, CheckSquare, Square, Dumbbell, Plus } from 'lucide-react';
+import { Clock, TrendingUp, CheckSquare, Square, Dumbbell, Plus, Target } from 'lucide-react';
 
 interface WorkoutCardProps {
   plan: WorkoutPlan;
@@ -106,12 +106,21 @@ const WorkoutCard: React.FC<WorkoutCardProps> = ({
     <div className="flex flex-col h-full bg-gray-50/50 dark:bg-slate-900/50 relative">
       
       {/* Summary Header */}
-      <div className="p-4 grid grid-cols-2 gap-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
-        <div className="bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-lg flex flex-col items-center justify-center text-center">
-          <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400 mb-1" />
+      <div className="p-4 grid grid-cols-3 gap-3 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800">
+        
+        {/* Focus / Target */}
+        <div className="col-span-3 sm:col-span-1 bg-indigo-100 dark:bg-indigo-900/40 p-3 rounded-lg flex flex-col items-center justify-center text-center border border-indigo-200 dark:border-indigo-800/50">
+          <Target className="w-4 h-4 text-indigo-700 dark:text-indigo-300 mb-1" />
+          <span className="text-sm font-bold text-indigo-900 dark:text-indigo-100 line-clamp-1">
+             {plan.focus || "Full Body"}
+          </span>
+        </div>
+
+        <div className="bg-gray-50 dark:bg-slate-800 p-3 rounded-lg flex flex-col items-center justify-center text-center border border-gray-100 dark:border-slate-700">
+          <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400 mb-1" />
           <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{plan.duration}</span>
         </div>
-        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg flex flex-col items-center justify-center text-center">
+        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg flex flex-col items-center justify-center text-center border border-orange-100 dark:border-orange-800/30">
           <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400 mb-1" />
           <span className="text-sm font-bold text-gray-800 dark:text-gray-200 capitalize">{plan.difficulty}</span>
         </div>

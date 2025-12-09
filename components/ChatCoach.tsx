@@ -6,16 +6,11 @@ import { Send, User, Bot } from 'lucide-react';
 
 interface ChatCoachProps {
   user: UserProfile;
+  messages: ChatMessage[];
+  onUpdateMessages: (msgs: ChatMessage[]) => void;
 }
 
-const ChatCoach: React.FC<ChatCoachProps> = ({ user }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'model',
-      text: `Namaste ${user.name}! I am your AI Coach. I can help swap meals, explain exercises, or give motivation.`,
-      timestamp: Date.now()
-    }
-  ]);
+const ChatCoach: React.FC<ChatCoachProps> = ({ user, messages, onUpdateMessages }) => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -30,24 +25,28 @@ const ChatCoach: React.FC<ChatCoachProps> = ({ user }) => {
     if (!input.trim() || loading) return;
 
     const userMsg: ChatMessage = { role: 'user', text: input, timestamp: Date.now() };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedHistory = [...messages, userMsg];
+    
+    // Optimistic update
+    onUpdateMessages(updatedHistory);
     setInput('');
     setLoading(true);
 
     try {
-      const history = messages.map(m => ({
+      // Prepare history for API (Gemini expects role/parts)
+      const historyForApi = updatedHistory.map(m => ({
         role: m.role,
         parts: [{ text: m.text }]
       }));
 
-      const responseText = await chatWithCoach(user, history, userMsg.text);
+      const responseText = await chatWithCoach(user, historyForApi, userMsg.text);
       
       const botMsg: ChatMessage = { role: 'model', text: responseText, timestamp: Date.now() };
-      setMessages(prev => [...prev, botMsg]);
+      onUpdateMessages([...updatedHistory, botMsg]);
     } catch (error) {
       console.error(error);
-      const errorMsg: ChatMessage = { role: 'model', text: "Sorry, connection error.", timestamp: Date.now() };
-      setMessages(prev => [...prev, errorMsg]);
+      const errorMsg: ChatMessage = { role: 'model', text: "Sorry, I'm having trouble connecting right now. Please try again.", timestamp: Date.now() };
+      onUpdateMessages([...updatedHistory, errorMsg]);
     } finally {
       setLoading(false);
     }

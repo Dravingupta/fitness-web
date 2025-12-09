@@ -75,14 +75,29 @@ export const generateDietPlan = async (profile: UserProfile): Promise<DietPlan> 
     - Example: If allergic to nuts, do not use cashews in gravy.
   `;
 
+  // Macro Construction
+  let calorieContext = "";
+  if (profile.macroMode === 'custom' && profile.customMacros) {
+      calorieContext = `
+      STRICT MACRO TARGETS:
+      - Protein: ${profile.customMacros.protein}g
+      - Carbs: ${profile.customMacros.carbs}g
+      - Fats: ${profile.customMacros.fats}g
+      
+      You MUST adjust portion sizes and food choices to hit these targets as closely as possible (within +/- 5%).
+      `;
+  } else {
+      calorieContext = `Calories: Target specific calories based on ${profile.weight}kg and ${profile.goal}. Calculate optimal macros for ${profile.goal}.`;
+  }
+
   const prompt = `
     Create a detailed daily diet plan for an Indian user.
     Context:
     - Region: ${profile.region}
     - Preference: ${profile.dietaryPreference}
     - Goal: ${profile.goal}
-    - Calories: Target specific calories based on ${profile.weight}kg and ${profile.goal}.
     - Budget Level: ${budgetInstruction}
+    ${calorieContext}
     ${allergyContext}
 
     Output Requirements:
@@ -243,17 +258,56 @@ export const swapMeal = async (profile: UserProfile, currentMeal: MealItem): Pro
   }
 };
 
-export const generateWorkoutPlan = async (profile: UserProfile): Promise<WorkoutPlan> => {
+/**
+ * Generates a full 7-day weekly workout plan.
+ * Returns an array of WorkoutPlan objects (Day 1 to Day 7).
+ */
+export const generateWeeklyWorkoutPlan = async (profile: UserProfile, startDateStr: string): Promise<WorkoutPlan[]> => {
+  const startDate = new Date(startDateStr);
+  
+  // Gym Context Construction
+  let workoutContext = "";
+  if (profile.workoutPreference === 'Gym') {
+      workoutContext = `
+      LOCATION: GYM
+      STRUCTURE: 7-Day Split (Starting from ${startDate.toLocaleDateString('en-US', { weekday: 'long' })})
+      
+      MANDATORY SPLIT LOGIC:
+      - Assign specific muscle groups to specific days of the week.
+      - Sunday must be REST or Light Active Recovery.
+      - Monday: Chest/Triceps (or Push)
+      - Tuesday: Back/Biceps (or Pull)
+      - Wednesday: Legs/Shoulders
+      - Thursday: Chest/Back or Cardio/Abs
+      - Friday: Arms/Shoulders or Lower Body
+      - Saturday: Full Body or Functional
+      - Sunday: REST
+      
+      DO NOT mix random exercises (e.g., do not put Planks on Chest day unless it's for abs finisher).
+      Use Gym equipment (Barbells, Dumbbells, Machines).
+      `;
+  } else {
+      workoutContext = `
+      LOCATION: HOME
+      STRUCTURE: 7-Day Routine (Starting from ${startDate.toLocaleDateString('en-US', { weekday: 'long' })})
+      Equipment: Bodyweight or common household items.
+      Focus: Upper/Lower Split or Full Body Intensity.
+      Sunday must be Rest.
+      `;
+  }
+
   const prompt = `
-    Create a daily home workout plan for an Indian user.
+    Create a COMPLETE 7-DAY WEEKLY workout plan for an Indian user.
     Context:
     - Goal: ${profile.goal}
     - Level: ${profile.activityLevel}
-    - Equipment: Mostly bodyweight or common household items.
+    ${workoutContext}
 
     Output Requirements:
-    - Warmup (3-4 moves), Main Circuit (6-8 exercises), Cooldown (3 moves).
-    - Provide 'estimatedCalories' for each exercise assuming average intensity.
+    - Return an ARRAY of 7 Daily Workout Plans.
+    - Day 1 matches the start day provided.
+    - Each day must have: duration, difficulty, warmup, exercises, cooldown.
+    - Provide 'estimatedCalories' for each exercise.
     - STRICT JSON.
   `;
 
@@ -270,17 +324,29 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
     required: ["name", "sets", "reps", "description", "estimatedCalories"],
   };
 
-  const workoutPlanSchema: Schema = {
+  const dailyWorkoutSchema: Schema = {
     type: Type.OBJECT,
     properties: {
+      dayName: { type: Type.STRING, description: "e.g., Monday - Chest Day" },
       duration: { type: Type.STRING },
       difficulty: { type: Type.STRING, enum: ["beginner", "intermediate", "advanced"] },
       warmup: { type: Type.ARRAY, items: { type: Type.STRING } },
       exercises: { type: Type.ARRAY, items: exerciseSchema },
       cooldown: { type: Type.ARRAY, items: { type: Type.STRING } },
     },
-    required: ["duration", "difficulty", "warmup", "exercises", "cooldown"],
+    required: ["dayName", "duration", "difficulty", "warmup", "exercises", "cooldown"],
   };
+
+  const weeklyPlanSchema: Schema = {
+    type: Type.OBJECT,
+    properties: {
+        weekPlan: {
+            type: Type.ARRAY,
+            items: dailyWorkoutSchema,
+            description: "Array of 7 workout plans for the week"
+        }
+    }
+  }
 
   try {
     const response = await ai.models.generateContent({
@@ -288,7 +354,7 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
       contents: prompt,
       config: {
         responseMimeType: JSON_MIME_TYPE,
-        responseSchema: workoutPlanSchema,
+        responseSchema: weeklyPlanSchema,
       },
     });
 
@@ -296,11 +362,17 @@ export const generateWorkoutPlan = async (profile: UserProfile): Promise<Workout
     if (!text) throw new Error("No response from AI");
     
     const parsed = JSON.parse(text);
-    // Add client-side IDs
-    parsed.exercises = parsed.exercises.map((e: any) => ({ ...e, id: generateId() }));
-    return parsed;
+    
+    // Process each day to add IDs and map dayName to focus
+    const processedDays: WorkoutPlan[] = parsed.weekPlan.map((day: any) => ({
+        ...day,
+        focus: day.dayName, // Map AI's dayName (e.g. Chest Day) to focus field
+        exercises: day.exercises.map((e: any) => ({ ...e, id: generateId() }))
+    }));
+
+    return processedDays;
   } catch (error) {
-    console.error("Workout generation failed:", error);
+    console.error("Weekly workout generation failed:", error);
     throw error;
   }
 };
@@ -321,6 +393,7 @@ export const chatWithCoach = async (
     - Region: ${profile.region}
     - Allergies: ${allergyList}
     - Allergy Notes: ${profile.allergyNotes || "None"}
+    - Workout Location: ${profile.workoutPreference || "Home"}
 
     Guidelines:
     - Be encouraging, strict but friendly (like a good Indian coach "Guru-ji" style).
