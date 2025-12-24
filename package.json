@@ -1,7 +1,7 @@
 {
-  "name": "indian-ai-fitness-coach",
+  "name": "fitness-web-client",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,15 +9,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.2.1",
-    "react": "^19.2.1",
-    "@google/genai": "^1.31.0",
-    "lucide-react": "^0.556.0"
+    "axios": "^1.6.0",
+    "firebase": "^10.0.0",
+    "lucide-react": "^0.300.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.30.2"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "vite": "^5.0.0"
   }
 }
