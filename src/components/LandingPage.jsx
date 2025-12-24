@@ -26,10 +26,7 @@ const LandingPage = ({ onGoogleLogin, onEmailLoginClick }) => {
             <section className="relative pt-12 pb-20 sm:pt-16 sm:pb-24 overflow-hidden">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col items-center text-center">
 
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold uppercase tracking-wider mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse"></span>
-                        Powered by Gemini 3 Pro
-                    </div>
+                    
 
                     <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight leading-tight max-w-4xl animate-in fade-in slide-in-from-bottom-5 duration-700 delay-100">
                         Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Indian Fitness Coach</span>
